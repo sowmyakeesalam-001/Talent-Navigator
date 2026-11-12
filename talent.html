@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talent Navigator - Smart Career Intelligence & Job Portal</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- SheetJS Excel Library -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- NAVBAR HEADER -->
+    <header>
+        <div class="brand" onclick="navigateToHome()">
+            <div class="brand-icon">
+                <i class="fa-solid fa-compass-drafting"></i>
+            </div>
+            <div>
+                <div class="brand-title">Talent Navigator</div>
+                <div class="brand-tagline">Career Intelligence & Job Portal</div>
+            </div>
+        </div>
+
+        <div class="nav-menu">
+            <button class="nav-btn" onclick="showAboutPage()"><i class="fa-solid fa-circle-info"></i> About Us</button>
+            <button class="nav-btn" onclick="showJobFeedPage()"><i class="fa-solid fa-newspaper"></i> Job Feed</button>
+            <button class="nav-btn" id="userUpdatesNavBtn" style="display:none;" onclick="showUpdatesPage()"><i class="fa-solid fa-bell"></i> Updates</button>
+            <button class="nav-btn" id="notifyAdminNavBtn" onclick="openNotifyAdminModal()"><i class="fa-solid fa-paper-plane"></i> Tip Job to Admin</button>
+
+            <!-- Admin Nav Actions -->
+            <button class="nav-btn" id="adminDashNavBtn" style="display:none;" onclick="showAdminDashboardPage()"><i class="fa-solid fa-gauge-high"></i> Admin Portal</button>
+            
+            <div id="sessionBadge"></div>
+            <button class="nav-btn" id="logoutBtn" style="display:none;" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+        </div>
+    </header>
+
+
+    <!-- STEP PROGRESS INDICATOR (ONLY SHOWN FOR USER CANDIDATE SESSIONS) -->
+    <div class="step-progress" id="stepProgress" style="display: none;">
+        <div class="step-item active" id="stepIndicator1">
+            <div class="step-number">1</div>
+            <div class="step-label">Account</div>
+        </div>
+        <div class="step-item" id="stepIndicator2">
+            <div class="step-number">2</div>
+            <div class="step-label">Assessment</div>
+        </div>
+        <div class="step-item" id="stepIndicator3">
+            <div class="step-number">3</div>
+            <div class="step-label">Roadmap</div>
+        </div>
+    </div>
+
+
+    <!-- AUTHENTICATION PAGE (USER vs ADMIN LOGIN) -->
+    <div id="authPage" class="container" style="display: block;">
+        <div class="page-header">
+            <h2>Welcome to Talent Navigator</h2>
+            <p>Please select your login type to access the platform.</p>
+        </div>
+
+        <div class="auth-tabs">
+            <div class="auth-tab active" id="tabUserLogin" onclick="switchAuthTab('user')">
+                <i class="fa-solid fa-user"></i> Candidate Login
+            </div>
+            <div class="auth-tab" id="tabAdminLogin" onclick="switchAuthTab('admin')">
+                <i class="fa-solid fa-shield-halved"></i> Administrator Portal
+            </div>
+        </div>
+
+        <div id="authError" class="error-message">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span id="authErrorText"></span>
+        </div>
+
+        <!-- USER LOGIN FORM -->
+        <div id="userLoginForm">
+            <div class="form-group">
+                <label for="username"><i class="fa-solid fa-signature"></i> Full Name (3 - 30 Alphabetic Characters)</label>
+                <input type="text" id="username" placeholder="e.g. Alex Morgan" maxlength="30" autocomplete="off" onkeydown="handleEnterKey(event, 'regno')">
+            </div>
+
+            <div class="form-group">
+                <label for="regno"><i class="fa-solid fa-id-card"></i> 10-Character Student ID</label>
+                <input type="text" id="regno" maxlength="10" placeholder="e.g. AB12345678" autocomplete="off" onkeydown="handleEnterKey(event, 'userLoginBtn')">
+            </div>
+
+            <button class="btn-primary" id="userLoginBtn" onclick="handleUserLogin()">
+                Enter Assessment Portal <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- ADMIN LOGIN FORM -->
+        <div id="adminLoginForm" style="display: none;">
+            <div class="form-group">
+                <label for="adminUser"><i class="fa-solid fa-user-gear"></i> Admin Username</label>
+                <input type="text" id="adminUser" placeholder="Enter Username" autocomplete="off" onkeydown="handleEnterKey(event, 'adminPass')">
+            </div>
+
+            <div class="form-group">
+                <label for="adminPass"><i class="fa-solid fa-key"></i> Admin Password</label>
+                <input type="password" id="adminPass" placeholder="Enter Password" onkeydown="handleEnterKey(event, 'adminLoginBtn')">
+            </div>
+
+            <button class="btn-primary" id="adminLoginBtn" style="background: var(--admin-gradient);" onclick="handleAdminLogin()">
+                Access Admin Control Panel <i class="fa-solid fa-lock"></i>
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ADMIN DASHBOARD PAGE (REPLACES ASSESSMENT/ROADMAP FOR ADMIN) -->
+    <div id="adminDashboardPage" class="container">
+        <div class="page-header">
+            <h2>Administrator Control Dashboard</h2>
+            <p>Manage candidate records, review user tip submissions, and publish job notices.</p>
+        </div>
+
+        <div class="admin-dashboard-grid">
+            <div class="admin-card" onclick="openHistoryModal()">
+                <div class="admin-card-icon"><i class="fa-solid fa-folder-open"></i></div>
+                <h4>Candidate Records & Export</h4>
+                <p>View all candidate assessment submissions and download complete reports as Excel (.xlsx).</p>
+                <button class="nav-btn" style="margin-top: 10px; width: 100%; justify-content: center;"><i class="fa-solid fa-file-excel"></i> Open Records & Export</button>
+            </div>
+
+            <div class="admin-card" onclick="openAdminInboxModal()">
+                <div class="admin-card-icon" style="background: linear-gradient(135deg, #06b6d4, #0284c7);"><i class="fa-solid fa-inbox"></i></div>
+                <h4>User Job Tips Inbox</h4>
+                <p>Inspect job tips and recruitment announcements submitted directly by candidate users.</p>
+                <button class="nav-btn" style="margin-top: 10px; width: 100%; justify-content: center;"><i class="fa-solid fa-envelope-open-text"></i> Open Tips Inbox</button>
+            </div>
+
+            <div class="admin-card" onclick="openPostArticleModal()">
+                <div class="admin-card-icon" style="background: linear-gradient(135deg, #8b5cf6, #d946ef);"><i class="fa-solid fa-plus-circle"></i></div>
+                <h4>Post Job Announcement</h4>
+                <p>Publish verified recruitment opportunities, salary scales, and apply links to the public feed.</p>
+                <button class="nav-btn" style="margin-top: 10px; width: 100%; justify-content: center;"><i class="fa-solid fa-paper-plane"></i> Publish Job Notice</button>
+            </div>
+
+            <div class="admin-card" onclick="openAdminHelpModal()">
+                <div class="admin-card-icon" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fa-solid fa-headset"></i></div>
+                <h4>Help & Correction Requests</h4>
+                <p>Inspect feedback, queries, and profile correction requests submitted from the About page.</p>
+                <button class="nav-btn" style="margin-top: 10px; width: 100%; justify-content: center;"><i class="fa-solid fa-comments"></i> Open Help Inbox</button>
+            </div>
+
+            <div class="admin-card" onclick="openPublishUpdatesModal()">
+                <div class="admin-card-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);"><i class="fa-solid fa-bullhorn"></i></div>
+                <h4>Publish Board Updates</h4>
+                <p>Broadcast announcements, platform updates, or guidelines directly to candidate user dashboards.</p>
+                <button class="nav-btn" style="margin-top: 10px; width: 100%; justify-content: center;"><i class="fa-solid fa-bullhorn"></i> Publish Update</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- CANDIDATE CAREER ASSESSMENT FORM -->
+    <div id="formPage" class="container">
+        <div class="page-header">
+            <h2>Career Path Assessment</h2>
+            <p>Define your employment preferences and core subject specialization.</p>
+        </div>
+
+        <div id="formError" class="error-message">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span id="formErrorText"></span>
+        </div>
+
+        <!-- SECTOR -->
+        <div class="form-group">
+            <label><i class="fa-solid fa-building-columns"></i> Preferred Employment Sector</label>
+            <div class="radio-options">
+                <div class="radio-card">
+                    <input type="radio" name="jobtype" id="sectorGovt" value="Government Job" checked onchange="showInterestOptions()">
+                    <label for="sectorGovt" class="radio-label"><i class="fa-solid fa-landmark"></i> Government / Public Sector</label>
+                </div>
+                <div class="radio-card">
+                    <input type="radio" name="jobtype" id="sectorPvt" value="Private Job" onchange="showInterestOptions()">
+                    <label for="sectorPvt" class="radio-label"><i class="fa-solid fa-briefcase"></i> Private / Corporate Sector</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- CAREER INTEREST -->
+        <div class="form-group">
+            <label for="careerInterest"><i class="fa-solid fa-bullseye"></i> Career Track Focus</label>
+            <select id="careerInterest">
+                <!-- Populated dynamically -->
+            </select>
+        </div>
+
+        <!-- CORE SUBJECT -->
+        <div class="form-group">
+            <label for="subject"><i class="fa-solid fa-graduation-cap"></i> Primary Specialization / Core Subject</label>
+            <select id="subject">
+                <option value="">-- Select Specialization Subject --</option>
+                <option value="Computer Science">Computer Science & IT</option>
+                <option value="Electronics & Communication">Electronics & Communication Engineering (ECE)</option>
+                <option value="Electronics & Electrical">Electronics & Electrical Engineering (EEE)</option>
+                <option value="Civil Engineering">Civil Engineering</option>
+                <option value="Mechanical Engineering">Mechanical Engineering</option>
+                <option value="Biology">Biology & Life Sciences</option>
+                <option value="Commerce">Commerce & Accountancy</option>
+                <option value="Arts">Humanities & Social Sciences</option>
+            </select>
+        </div>
+
+        <!-- WORK TYPE -->
+        <div class="form-group">
+            <label><i class="fa-solid fa-clock"></i> Desired Work Engagement</label>
+            <div class="radio-options">
+                <div class="radio-card">
+                    <input type="radio" name="worktype" id="wtFull" value="Full-Time" checked>
+                    <label for="wtFull" class="radio-label"><i class="fa-solid fa-business-time"></i> Full-Time Role</label>
+                </div>
+                <div class="radio-card">
+                    <input type="radio" name="worktype" id="wtPart" value="Part-Time">
+                    <label for="wtPart" class="radio-label"><i class="fa-solid fa-user-clock"></i> Part-Time / Flexible</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- INCOME -->
+        <div class="form-group">
+            <label for="income"><i class="fa-solid fa-indian-rupee-sign"></i> Expected Monthly Target Income (₹) (Limit of 6 digits)</label>
+            <input type="number" id="income" placeholder="e.g. 75000" min="10000" max="999999" oninput="if(this.value.length > 6) this.value = this.value.slice(0,6);" onkeydown="handleEnterKey(event, 'findCareerBtn')">
+        </div>
+
+        <div class="btn-group">
+            <button class="nav-btn" onclick="logout()"><i class="fa-solid fa-arrow-left"></i> Exit Session</button>
+            <button class="btn-primary" id="findCareerBtn" onclick="findCareer()">Generate Career Intelligence <i class="fa-solid fa-wand-magic-sparkles"></i></button>
+        </div>
+    </div>
+
+
+    <!-- RESULT & DETAILED ROADMAP PAGE -->
+    <div id="resultPage" class="container">
+        <div id="resultBox">
+            <!-- Dynamic Result Card -->
+        </div>
+
+        <div class="btn-group">
+            <button class="nav-btn" onclick="goBackToForm()"><i class="fa-solid fa-sliders"></i> Modify Preferences</button>
+        </div>
+    </div>
+
+
+    <!-- ABOUT PAGE -->
+    <div id="aboutPage" class="container">
+        <div class="page-header">
+            <h2>About Talent Navigator</h2>
+            <p>Empowering candidates & institutions with next-generation career intelligence.</p>
+        </div>
+
+        <div class="usefulness-grid">
+            <div class="usefulness-card">
+                <h5><i class="fa-solid fa-bullseye"></i> Precision Career Matching</h5>
+                <p>Talent Navigator analyzes academic backgrounds, technical specializations, and salary targets to map out optimal high-growth career tracks.</p>
+            </div>
+            <div class="usefulness-card">
+                <h5><i class="fa-solid fa-shield-halved"></i> Dual Role Architecture</h5>
+                <p>Built with enterprise security separating candidate discovery sessions from administrative record management and job posting controls.</p>
+            </div>
+            <div class="usefulness-card">
+                <h5><i class="fa-solid fa-newspaper"></i> Verified Job Articles</h5>
+                <p>Admins publish curated career opportunities and exam notices directly to the platform feed, while candidates can tip off admins on new job listings.</p>
+            </div>
+        </div>
+
+        <!-- PLATFORM DISCLAIMER BANNER -->
+        <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-left: 4px solid var(--accent-amber); border-radius: var(--radius-md); padding: 18px 22px; margin-top: 25px; display: flex; align-items: center; gap: 15px;">
+            <div style="font-size: 24px; color: var(--accent-amber); flex-shrink: 0;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div>
+                <h4 style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: #fef08a; margin-bottom: 4px;">Important Platform Disclaimer</h4>
+                <p style="font-size: 13.5px; color: #e2e8f0; margin: 0; line-height: 1.5;">
+                    Please trust this as a <strong>helpful guide</strong>, not entirely as a final decision. It is generated based strictly on your stated interests, specialization, and potential industry statistics.
+                </p>
+            </div>
+        </div>
+
+        <!-- HELP & CORRECTION REQUEST SECTION -->
+        <div style="background: rgba(15, 23, 42, 0.65); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 25px; margin-top: 25px;">
+            <h4 style="font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-headset" style="color: var(--accent-emerald);"></i> Need Help or Have a Correction?
+            </h4>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 18px;">
+                Submit any queries, feedback, or data correction requests directly to the Administrator Dashboard.
+            </p>
+
+            <div class="form-group">
+                <label for="helpName"><i class="fa-solid fa-user"></i> Full Candidate Name</label>
+                <input type="text" id="helpName" placeholder="Enter your full name">
+            </div>
+
+            <div class="form-group">
+                <label for="helpEmail"><i class="fa-solid fa-envelope"></i> Email Address</label>
+                <input type="email" id="helpEmail" placeholder="Enter your email address (e.g. candidate@example.com)">
+            </div>
+
+            <div class="form-group">
+                <label for="helpDetails"><i class="fa-solid fa-pen-to-square"></i> Correction / Query Details</label>
+                <textarea id="helpDetails" rows="3" placeholder="Describe the query or correction needed for your profile/roadmap..."></textarea>
+            </div>
+
+            <button class="btn-primary" style="width: auto; padding: 10px 22px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);" onclick="submitHelpRequest()">
+                <i class="fa-solid fa-paper-plane"></i> Send Correction to Admin
+            </button>
+        </div>
+
+        <div style="margin-top: 30px; text-align: center;">
+            <button class="btn-primary" onclick="navigateToHome()"><i class="fa-solid fa-house"></i> Return to Home</button>
+        </div>
+    </div>
+
+
+    <!-- JOB FEED & ARTICLES PAGE -->
+    <div id="jobFeedPage" class="container">
+        <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; text-align: left; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
+            <div>
+                <h2>Latest Job Articles & Recruitment Notices</h2>
+                <p>Verified public and corporate employment announcements.</p>
+            </div>
+            
+            <button class="btn-primary" id="postArticleBtn" style="display:none; width: auto; background: var(--admin-gradient);" onclick="openPostArticleModal()">
+                <i class="fa-solid fa-plus"></i> Post Job Announcement
+            </button>
+        </div>
+
+        <!-- SECTOR FILTER TABS -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button class="nav-btn active" id="filterAllBtn" onclick="filterJobs('all')"><i class="fa-solid fa-layer-group"></i> All Openings</button>
+            <button class="nav-btn" id="filterGovtBtn" onclick="filterJobs('Government Job')"><i class="fa-solid fa-landmark" style="color: var(--accent-amber);"></i> 🏛️ Government Jobs</button>
+            <button class="nav-btn" id="filterPvtBtn" onclick="filterJobs('Private Job')"><i class="fa-solid fa-briefcase" style="color: var(--accent-cyan);"></i> 💼 Private Jobs</button>
+        </div>
+
+        <div class="article-grid" id="articleGridContainer">
+            <!-- Articles populated dynamically -->
+        </div>
+
+        <div style="margin-top: 30px; text-align: center;">
+            <button class="btn-primary" onclick="navigateToHome()"><i class="fa-solid fa-house"></i> Return to Home</button>
+        </div>
+    </div>
+
+
+    <!-- UPDATES PAGE FOR USERS -->
+    <div id="updatesPage" class="container">
+        <div class="page-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
+            <h2>Dashboard Updates & Announcements</h2>
+            <p>Stay informed with the latest notifications and bulletins broadcasted by the Administrator.</p>
+        </div>
+
+        <div class="article-grid" id="updatesGridContainer" style="margin-top: 25px;">
+            <!-- Updates populated dynamically -->
+        </div>
+
+        <div style="margin-top: 30px; text-align: center;">
+            <button class="btn-primary" onclick="navigateToHome()"><i class="fa-solid fa-house"></i> Return to Home</button>
+        </div>
+    </div>
+
+
+    <!-- MODAL: POST JOB ARTICLE (ADMIN ONLY) -->
+    <div id="postArticleModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-newspaper" style="color: var(--accent-amber);"></i> Post New Job Announcement</h3>
+                <button class="modal-close" onclick="closePostArticleModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Job Sector</label>
+                    <select id="artSector">
+                        <option value="Government Job">🏛️ Government Sector</option>
+                        <option value="Private Job">💼 Private / Tech Corporate</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Job Title / Position</label>
+                    <input type="text" id="artTitle" placeholder="e.g. Senior Software Engineer - Cloud Systems">
+                </div>
+                <div class="form-group">
+                    <label>Company / Department Name</label>
+                    <input type="text" id="artCompany" placeholder="e.g. National Informatics Centre / Tech Corp">
+                </div>
+                <div class="form-group">
+                    <label>Salary Package / CTC</label>
+                    <input type="text" id="artSalary" placeholder="e.g. ₹8,00,000 - ₹12,00,000 LPA">
+                </div>
+                <div class="form-group">
+                    <label>Official Apply Link</label>
+                    <input type="url" id="artLink" placeholder="https://example.com/careers">
+                </div>
+                <div class="form-group">
+                    <label>Description & Requirements</label>
+                    <textarea id="artDesc" rows="4" placeholder="Enter key eligibility criteria, qualification, and application deadline..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="nav-btn" onclick="closePostArticleModal()">Cancel</button>
+                <button class="btn-primary" style="background: var(--admin-gradient);" onclick="saveJobArticle()">Publish Announcement</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL: NOTIFY ADMIN ABOUT JOB (USER TO ADMIN) -->
+    <div id="notifyAdminModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-envelope" style="color: var(--accent-cyan);"></i> Tip Off Admin About a Job Opening</h3>
+                <button class="modal-close" onclick="closeNotifyAdminModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Job Title</label>
+                    <input type="text" id="tipTitle" placeholder="e.g. Junior Web Developer opening at XYZ Corp">
+                </div>
+                <div class="form-group">
+                    <label>Organization / Link</label>
+                    <input type="text" id="tipLink" placeholder="https://careers.company.com/job/123">
+                </div>
+                <div class="form-group">
+                    <label>Message / Details for Admin</label>
+                    <textarea id="tipMessage" rows="3" placeholder="I found this recruitment notice and thought it should be shared with candidates..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="nav-btn" onclick="closeNotifyAdminModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitJobTipToAdmin()"><i class="fa-solid fa-paper-plane"></i> Send Tip to Admin Inbox</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL: ADMIN RECORDS HISTORY (ADMIN ONLY) -->
+    <div id="historyModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-folder-open" style="color: var(--accent-amber);"></i> Candidate Assessment Records</h3>
+                <button class="modal-close" onclick="closeHistoryModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Candidate</th>
+                                <th>Regd No.</th>
+                                <th>Sector</th>
+                                <th>Track</th>
+                                <th>Subject</th>
+                                <th>Target Income</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary btn-excel" onclick="downloadExcel()"><i class="fa-solid fa-file-excel"></i> Export All to Excel</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL: ADMIN INBOX (ADMIN ONLY) -->
+    <div id="adminInboxModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-inbox" style="color: var(--accent-cyan);"></i> User Job Tips Inbox</h3>
+                <button class="modal-close" onclick="closeAdminInboxModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="inboxBody">
+                <!-- User job tips listed here -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL: ADMIN HELP & CORRECTION REQUESTS (ADMIN ONLY) -->
+    <div id="adminHelpModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-headset" style="color: var(--accent-emerald);"></i> Candidate Help & Correction Inbox</h3>
+                <button class="modal-close" onclick="closeAdminHelpModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="helpInboxBody">
+                <!-- Help & correction requests listed here -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL: PUBLISH BOARD UPDATES (ADMIN ONLY) -->
+    <div id="publishUpdatesModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-bullhorn" style="color: var(--accent-cyan);"></i> Publish Dashboard Update</h3>
+                <button class="modal-close" onclick="closePublishUpdatesModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Update Title</label>
+                    <input type="text" id="updateTitle" placeholder="e.g. Schedule for UPSC Prelims 2026 Guidance Session">
+                </div>
+                <div class="form-group">
+                    <label>Content / Message Details</label>
+                    <textarea id="updateContent" rows="5" placeholder="Type the update message for candidates here..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="nav-btn" onclick="closePublishUpdatesModal()">Cancel</button>
+                <button class="btn-primary" style="background: var(--admin-gradient);" onclick="saveDashboardUpdate()">Broadcast Update</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="script.js"></script>
+</body>
+</html>
